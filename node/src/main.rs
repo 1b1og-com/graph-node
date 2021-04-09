@@ -661,6 +661,8 @@ fn start_block_ingestor(
             if chain_store.is_ingestible() {
                 Some((network_name, eth_adapters, chain_store))
             } else {
+                warn!(logger, "Chain is not ingestible. Not creating block ingestor for it";
+                      "network_name" => &network_name);
                 None
             }
         })
