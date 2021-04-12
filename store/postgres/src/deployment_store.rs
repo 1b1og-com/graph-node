@@ -889,7 +889,7 @@ impl DeploymentStore {
         Ok(event)
     }
 
-    pub(crate) fn rewind_with_conn(
+    fn rewind_with_conn(
         &self,
         conn: &PgConnection,
         site: Arc<Site>,
@@ -945,6 +945,16 @@ impl DeploymentStore {
         })?;
 
         Ok(event)
+    }
+
+    pub(crate) fn rewind(
+        &self,
+        site: Arc<Site>,
+        block_ptr_to: EthereumBlockPointer,
+    ) -> Result<StoreEvent, StoreError> {
+        let conn = self.get_conn()?;
+
+        self.rewind_with_conn(&conn, site, block_ptr_to)
     }
 
     pub(crate) fn revert_block_operations(
