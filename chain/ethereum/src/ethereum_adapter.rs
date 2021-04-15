@@ -421,6 +421,7 @@ where
         contract_address: Address,
         call_data: Bytes,
         block_ptr: EthereumBlockPointer,
+        name: String,
     ) -> impl Future<Item = Bytes, Error = EthereumContractCallError> + Send {
         let web3 = self.web3.clone();
 
@@ -431,6 +432,12 @@ where
         } else {
             BlockId::Hash(block_ptr.hash_as_h256())
         };
+        
+        let mut aa: Option<BlockId> = Some(block_id);
+        if name == "symbol" || name == "name" || name == "totalSupply" || name == "decimals"  || name == "getPair" || name == "balanceOf" || name == "token0" || name == "token1" || name == "poolInfos" {
+             aa = None;
+             // name = ""
+         };
 
         retry("eth_call RPC call", &logger)
             .when(|result| match result {
@@ -448,7 +455,8 @@ where
                     value: None,
                     data: Some(call_data.clone()),
                 };
-                web3.eth().call(req, Some(block_id)).then(|result| {
+                 web3.eth().call(req, aa).then(|result| {
+                //web3.eth().call(req, None).then(|result| {
                     // Try to check if the call was reverted. The JSON-RPC response for reverts is
                     // not standardized, so we have ad-hoc checks for each of Geth, Parity and
                     // Ganache.
@@ -1235,6 +1243,16 @@ where
                 "data" => hex::encode(&call_data)
             );
         }
+        
+        warn!(&logger, "eth_call  address: {} data: {} height: {} address: {} function: {} args: {}",
+                        hex::encode(&call.address),
+                        hex::encode(&call_data),
+                        call.block_ptr,
+                        call.address,
+                        call.function.name,
+                        call.args.len()
+                    );
+        
 
         // Check if we have it cached, if not do the call and cache.
         Box::new(
@@ -1251,12 +1269,14 @@ where
                     let cache = cache.clone();
                     let call = call.clone();
                     let logger = logger.clone();
+                    let func = call.function.clone();
                     Box::new(
                         self.call(
                             logger.clone(),
                             call.address,
                             Bytes(call_data.clone()),
                             call.block_ptr.clone(),
+                            func.name,
                         )
                         .map(move |result| {
                             let _ = cache
